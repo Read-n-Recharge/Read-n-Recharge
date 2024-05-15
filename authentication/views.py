@@ -1,8 +1,8 @@
 from django.shortcuts import render
 
 # Create your views here.
-from .models import User,Profile
-from .serializer import UserSerializer,MyTokenObtainPairSerializer,RegisterSerializer
+from .models import User,StudyPrefernce
+from .serializer import UserSerializer,MyTokenObtainPairSerializer,RegisterSerializer,StudyPreferenceSerializer
 from rest_framework.decorators import api_view ,permission_classes  #convert Django views into RESTful API views.
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework import generics,status #generic views from DRF,provide commonly used patterns for creating API views.
@@ -31,5 +31,13 @@ def dashboard(request):
   
   return Response({},status=status.HTTP_400_BAD_REQUEST)
   
+
+class StudyPreferenceView(generics.CreateAPIView):
+  queryset= StudyPrefernce.objects.all()
+  permission_classes = ([AllowAny])
+  serializer_class = StudyPreferenceSerializer
+
+  def perform_create(self, serializer):
+    return serializer.save(user=self.request.user)
 
 

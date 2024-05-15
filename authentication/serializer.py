@@ -1,4 +1,4 @@
-from .models import User
+from .models import User,StudyPrefernce
 from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework import serializers
@@ -47,6 +47,13 @@ class RegisterSerializer(serializers.ModelSerializer):
         user.save()
 
         return user
+    
+class StudyPreferenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StudyPrefernce
+        fields = ('chronotype','concentration','studying_style','procrastination','physical_activity')
+
+    
                 
              
 
