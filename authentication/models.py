@@ -16,8 +16,9 @@ class User(AbstractUser):
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    name = models.CharField(max_length=1000)
-    surname = models.CharField(max_length=1000)
+    
+    # name = models.CharField(max_length=1000)
+    # surname = models.CharField(max_length=1000)
     verified = models.BooleanField(default=False)
 
 
