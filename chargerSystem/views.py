@@ -2,23 +2,34 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import ChargeStationINFO, TempData
-from .serializers import ChargeStationSerializers, TempDataSerializers
+from rest_framework.parsers import JSONParser
+from .models import RelayStatus
+from .serializers import RelayStatusSerializer
 
 
-# Create your views here.
-# class ChargeStationAPIView (APIView):
-#     def post(self, request, format=None):
-#         serializer = ChargeStationSerializers(data= request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class TempDataAPIView (APIView):
-    def post(self, request, format=None):
-        serializer = TempDataSerializers(data= request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+def control_relay_view(request):
+    return render(request, 'test_control_relay.html')
+
+class RelayCommandView(APIView):
+    parser_classes = [JSONParser]
+
+    def get(self, request, *args, **kwargs):
+        relay_status = RelayStatus.objects.last()
+        if relay_status:
+            serialzer = RelayStatusSerializer(relay_status)
+            return Response(serialzer.data)
+        else:
+            return Response({"relay1": "STOP", "relay2": "STOP"})
+        
+    def post(self, request, *arge, **kwarge):
+        relay = request.data.get('relay')
+        command  = request.data.get('command')
+
+        if relay == 'relay1':
+            RelayStatus.objects.update_or_create(id=1, defaults={'relay1_status': command})
+        elif relay == 'relay2':
+            RelayStatus.objects.update_or_create(id=1, defaults={'relay2_status': command})
+
+        return Response({'status': 'success'})   
+

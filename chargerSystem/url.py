@@ -1,8 +1,8 @@
 from django.urls import path 
-from .views import ChargeStationAPIView, TempDataAPIView
+from .views import RelayCommandView, control_relay_view
 
 
-urlpattern = [
-    # path('api/ChargeStationINFO', ChargeStationAPIView.as_view(), name='chargestaion_info_api'),
-    path ('api/tempData', TempDataAPIView.as_view(), name='temp_data_api'),
+urlpatterns = [
+    path('api/relay-command/', RelayCommandView.as_view(), name = 'relay-command'),
+    path('control-relay/', control_relay_view, name = 'control-relay')
 ]
