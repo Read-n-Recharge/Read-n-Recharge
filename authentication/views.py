@@ -1,13 +1,17 @@
-from django.shortcuts import render
 
 # Create your views here.
 from .models import User,StudyPrefernce
-from .serializer import UserSerializer,MyTokenObtainPairSerializer,RegisterSerializer,StudyPreferenceSerializer
-from rest_framework.decorators import api_view ,permission_classes  #convert Django views into RESTful API views.
+from .serializer import MyTokenObtainPairSerializer,RegisterSerializer,StudyPreferenceSerializer,UserSerializer
+from rest_framework.decorators import api_view ,permission_classes 
 from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework import generics,status #generic views from DRF,provide commonly used patterns for creating API views.
+from rest_framework import generics,status 
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from django.contrib.auth import get_user_model
+from rest_framework.exceptions import NotFound
+
+
+User = get_user_model()
 
 class MyTokenObtainPairView(TokenObtainPairView):
   serializer_class = MyTokenObtainPairSerializer
@@ -17,6 +21,11 @@ class RegisterView(generics.CreateAPIView):
   permission_classes = ([AllowAny])
   serializer_class = RegisterSerializer
 
+  def create(self, request, *args, **kwargs):
+      response = super().create(request, *args, **kwargs)
+      user_id = response.data.get('id')  
+      return Response({"user_id": user_id}, status=status.HTTP_201_CREATED)
+  
 @api_view(['GET','POST'])
 @permission_classes([IsAuthenticated])
 
@@ -31,13 +40,24 @@ def dashboard(request):
   
   return Response({},status=status.HTTP_400_BAD_REQUEST)
   
-
 class StudyPreferenceView(generics.CreateAPIView):
   queryset= StudyPrefernce.objects.all()
   permission_classes = ([AllowAny])
   serializer_class = StudyPreferenceSerializer
-
+  
   def perform_create(self, serializer):
-    return serializer.save(user=self.request.user)
+      user_id = self.kwargs.get('user_id')
+      try:
+          user = User.objects.get(pk=user_id)
+          return serializer.save(user=user)
+      except User.DoesNotExist:
+          raise NotFound({"error": "User not found."})
+    
+
+class UserDetailView(generics.RetrieveAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
 
 

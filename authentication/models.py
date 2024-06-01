@@ -35,8 +35,6 @@ post_save.connect(save_user_profile, sender=User)
 
 
 # study preference
-
-
 class StudyPrefernce(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
 

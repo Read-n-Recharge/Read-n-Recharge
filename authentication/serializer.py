@@ -21,13 +21,18 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         return token
     
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        data['user_id'] = self.user.id 
+        return data
+    
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     confirm_password = serializers.CharField(write_only=True, required=True)
 
     class Meta:
         model = User
-        fields = ('email', 'first_name', 'last_name','password','confirm_password')
+        fields = ('id','email', 'first_name', 'last_name','password','confirm_password')
 
     def validatePassword(self,attrs):
         if attrs['password'] != attrs['confirm_password']:
