@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Relay Control</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h1>Relay Control</h1>
+    <button id="relay1-start">Start Relay 1</button>
+    <button id="relay1-stop">Stop Relay 1</button>
+    <button id="relay2-start">Start Relay 2</button>
+    <button id="relay2-stop">Stop Relay 2</button>
+
+    <script>
+        $(document).ready(function() {
+            function sendCommand(relay, command) {
+                $.ajax({
+                    url: '/api/relay-command/',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ relay: relay, command: command }),
+                    success: function(response) {
+                        alert('Command sent successfully');
+                    },
+                    error: function(error) {
+                        alert('Error sending command');
+                    }
+                });
+            }
+
+            $('#relay1-start').click(function() {
+                sendCommand('relay1', 'START');
+            });
+
+            $('#relay1-stop').click(function() {
+                sendCommand('relay1', 'STOP');
+            });
+
+            $('#relay2-start').click(function() {
+                sendCommand('relay2', 'START');
+            });
+
+            $('#relay2-stop').click(function() {
+                sendCommand('relay2', 'STOP');
+            });
+        });
+    </script>
+</body>
+</html>
