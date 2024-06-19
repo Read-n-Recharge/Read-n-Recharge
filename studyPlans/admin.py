@@ -5,7 +5,7 @@ from .models import Task
 
 
 class TaskDisplayAdmin(admin.ModelAdmin):
-    list_display = ["user", "title", "deadlines", "Label", "complexity", "complete"]
+    list_display = ["user", "title", "deadlines", "details", "complexity", "complete"]
 
 
 admin.site.register(Task, TaskDisplayAdmin)
