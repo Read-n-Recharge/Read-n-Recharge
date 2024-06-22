@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "chargerSystem",
     "studyPlans",
+    "django_extensions",
 ]
 
 MIDDLEWARE = [
