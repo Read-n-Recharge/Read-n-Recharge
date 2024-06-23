@@ -3,6 +3,7 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.contrib.auth import authenticate
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -24,8 +25,22 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         return token
 
     def validate(self, attrs):
+        email = attrs.get("email")
+        password = attrs.get("password")
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            raise serializers.ValidationError(
+                {"detail": "No account found with this email."}
+            )
+
+        user = authenticate(username=email, password=password)
+        if user is None:
+            raise serializers.ValidationError({"detail": "Incorrect password."})
+
         data = super().validate(attrs)
-        data["user_id"] = self.user.id
+        data["user_id"] = user.id
         return data
 
 
