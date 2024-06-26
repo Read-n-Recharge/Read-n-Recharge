@@ -30,7 +30,10 @@ class RegisterView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         response = super().create(request, *args, **kwargs)
         user_id = response.data.get("id")
-        return Response({"user_id": user_id}, status=status.HTTP_201_CREATED)
+        user_data = response.data
+        return Response(
+            {"user_id": user_id, "user_data": user_data}, status=status.HTTP_201_CREATED
+        )
 
 
 @api_view(["GET", "POST"])
@@ -72,7 +75,7 @@ class UserStudyPreferenceView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_object(self):
-        user_id = self.kwargs.get('user_id')
+        user_id = self.kwargs.get("user_id")
         try:
             user = User.objects.get(pk=user_id)
             return StudyPrefernce.objects.get(user=user)

@@ -10,7 +10,7 @@ class Task(models.Model):
     details = models.CharField(max_length=50, blank=True)
     deadlines = models.DateField(null=True, blank=True)
     complexityLevel = [("low", "Low"), ("normal", "Normal"), ("high", "High")]
-    complexity = models.CharField(max_length=20, choices=complexityLevel)
+    complexity = models.CharField(max_length=20, choices=complexityLevel, blank=True)
     complete = models.BooleanField(default=False)
 
     def __str__(self):
