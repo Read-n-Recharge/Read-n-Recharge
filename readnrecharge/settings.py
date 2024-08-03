@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "chargerSystem",
     "studyPlans",
     "django_extensions",
+    "moodTrack",
 ]
 
 MIDDLEWARE = [

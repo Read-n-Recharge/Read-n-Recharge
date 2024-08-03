@@ -22,4 +22,5 @@ urlpatterns = [
     path("auth/", include("authentication.urls")),
     path("", include("chargerSystem.url")),
     path("task/", include("studyPlans.urls")),
+    path("moods/", include("moodTrack.urls")),
 ]
