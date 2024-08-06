@@ -5,7 +5,7 @@ from .models import MoodTrack
 
 
 class MoodDisplayAdmin(admin.ModelAdmin):
-    list_display = ["user", "mood", "timestamp", "context", "custom_context"]
+    list_display = ["user", "mood", "timestamp", "context"]
 
 
 admin.site.register(MoodTrack, MoodDisplayAdmin)
