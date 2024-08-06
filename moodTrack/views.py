@@ -14,4 +14,4 @@ class MoodViewSet(viewsets.ModelViewSet):
         return self.queryset.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.rquest.user)
+        serializer.save(user=self.request.user)
