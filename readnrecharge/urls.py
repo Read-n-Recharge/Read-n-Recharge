@@ -23,4 +23,5 @@ urlpatterns = [
     path("", include("chargerSystem.url")),
     path("task/", include("studyPlans.urls")),
     path("moods/", include("moodTrack.urls")),
+    path("points/", include("point.urls")),
 ]
