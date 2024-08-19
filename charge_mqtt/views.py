@@ -4,6 +4,11 @@ import paho.mqtt.client as mqtt
 import os
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt 
+from .serializers import RelayActivation
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes
+from .models import RelayActivation
+
 
 # Initialize the relay status dictionary with all relays inactive
 relay_status = {1: 'inactive', 2: 'inactive', 3: 'inactive', 4: 'inactive'}
@@ -59,15 +64,17 @@ def control_relay_module(relayID, duration):
             return JsonResponse({'status': 'failed', 'reason': f'Relay {relayID} is already active'}, status=400)
 
         topic = f"relay/{relayID}/control"
-        client.publish(topic, "START")
-        print(f"Sent command 'START' to '{topic}' for {duration} seconds")
+        # Send the START command with the duration included in the message payload
+        payload = json.dumps({"command": "START", "duration": duration})
+        client.publish(topic, payload)
+        print(f"Sent command '{payload}' to '{topic}' for {duration} seconds")
 
         # Update relay status to active
         relay_status[relayID] = 'active'
 
         def stop_relay():
-            client.publish(topic, "STOP")
-            print (f"Sent command 'STOP' to '{topic}' after {duration} seconds")
+            client.publish(topic, json.dumps({"command": "STOP"}))
+            print(f"Sent command 'STOP' to '{topic}' after {duration} seconds")
             client.disconnect()
 
             # Update relay status to inactive
@@ -79,15 +86,30 @@ def control_relay_module(relayID, duration):
         return JsonResponse({'status': 'success', 'relay': relayID, 'duration': duration})
     else:
         return JsonResponse({'status': 'failed', 'reason': 'Failed to Connect to MQTT Broker'}, status=500)
-    
+
 @csrf_exempt
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def start_relay(request, relayID):
+    user = request.user
+
     if request.method == 'POST':
         data = json.loads(request.body)
         duration = data.get('duration', 15)
+        
+        # Log the relay activation
+        activation = RelayActivation.objects.create(
+            relay_id=relayID,
+            user=user,
+            duration=duration * 60,
+         
+        )
+
+        # Control the relay module
         return control_relay_module(relayID, duration * 60)
     
     return JsonResponse({'status': 'failed', 'reason': 'Invalid request method'}, status=400)
+
 
 # Function to check the status of all relays
 def check_relay_status(request):
