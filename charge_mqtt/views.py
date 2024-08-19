@@ -1,3 +1,5 @@
+import json
+import threading
 import paho.mqtt.client as mqtt
 import os
 from django.http import JsonResponse
@@ -48,20 +50,32 @@ def start_mqtt_listener(request):
         
     return JsonResponse({'status': 'failed', 'reason': 'invalid request method'}, status=400)
 
-def control_relay_module(module_number, command):
+def control_relay_module(relayID, duration):
     client = connect_mqtt()
     if client:
-        topic = f"relay/{module_number}/control"
-        client.publish(topic, command)
-        print(f"Sent command '{command}' to '{topic}'")
+        topic = f"relay/{relayID}/control"
+        client.publish(topic, "START")
+        print(f"Sent command 'START' to '{topic}' for {duration} seconds")
 
-        return JsonResponse({'status': 'success', 'module': module_number, 'command': command})
+        def stop_relay():
+            client.publish(topic, "STOP")
+            print (f"Sent command 'STOP' to '{topic}' after {duration} seconds")
+            client.disconnect()
+
+            timer = threading.Timer(duration, stop_relay)
+            timer.start()
+
+        return JsonResponse({'status': 'success', 'relay': relayID, 'duration': duration})
     else:
         return JsonResponse({'status': 'failed', 'reason': 'Failed to Connect to MQTT Broker'}, status=500)
     
-def start_relay(request, module_number):
-    return control_relay_module(module_number, 'START')
+@csrf_exempt
+def start_relay(request, relayID):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        duration = data.get('duration', 15)
+        return control_relay_module(relayID, duration * 60)
+    
+    return JsonResponse({'status': 'failed', 'reason': 'Invalid request method'}, status=400)
 
-def stop_relay(request, module_number):
-    return control_relay_module(module_number, 'STOP')
 
