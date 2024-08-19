@@ -5,6 +5,9 @@ import os
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt 
 
+# Initialize the relay status dictionary with all relays inactive
+relay_status = {1: 'inactive', 2: 'inactive', 3: 'inactive', 4: 'inactive'}
+
 def on_message(client, userdata, message):
     print(f"Received message '{str(message.payload.decode())}' on topic '{message.topic}' with QoS {message.qos}")
 
@@ -38,7 +41,6 @@ def check_emqx_connection():
     else:
         print("Failed to send message due to connection issue")
 
-
 @csrf_exempt
 def start_mqtt_listener(request):
     if request.method == 'POST':
@@ -53,17 +55,26 @@ def start_mqtt_listener(request):
 def control_relay_module(relayID, duration):
     client = connect_mqtt()
     if client:
+        if relay_status.get(relayID) == 'active':
+            return JsonResponse({'status': 'failed', 'reason': f'Relay {relayID} is already active'}, status=400)
+
         topic = f"relay/{relayID}/control"
         client.publish(topic, "START")
         print(f"Sent command 'START' to '{topic}' for {duration} seconds")
+
+        # Update relay status to active
+        relay_status[relayID] = 'active'
 
         def stop_relay():
             client.publish(topic, "STOP")
             print (f"Sent command 'STOP' to '{topic}' after {duration} seconds")
             client.disconnect()
 
-            timer = threading.Timer(duration, stop_relay)
-            timer.start()
+            # Update relay status to inactive
+            relay_status[relayID] = 'inactive'
+
+        timer = threading.Timer(duration, stop_relay)
+        timer.start()
 
         return JsonResponse({'status': 'success', 'relay': relayID, 'duration': duration})
     else:
@@ -78,4 +89,6 @@ def start_relay(request, relayID):
     
     return JsonResponse({'status': 'failed', 'reason': 'Invalid request method'}, status=400)
 
-
+# Function to check the status of all relays
+def check_relay_status(request):
+    return JsonResponse(relay_status)
