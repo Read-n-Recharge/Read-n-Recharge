@@ -6,7 +6,6 @@ from .models import UserPoint, PointRecord
 
 class UserPointAdmin(admin.ModelAdmin):
     list_display = ["user", "total_points"]
-    search_fields = ("user__username",)
 
 
 class PointRecordAdmin(admin.ModelAdmin):
