@@ -40,7 +40,6 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             raise serializers.ValidationError({"detail": "Incorrect password."})
 
         data = super().validate(attrs)
-        data["user_id"] = user.id
         return data
 
 
