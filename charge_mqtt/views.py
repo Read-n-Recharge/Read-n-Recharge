@@ -13,9 +13,6 @@ from .models import RelayActivation
 from .relay_manager import relay_status
 
 
-
-
-
 def check_emqx_connection():
     client = connect_mqtt()
     if client:
@@ -102,7 +99,7 @@ def stop_relay_module(relayID):
         return validation_response
 
     if client:
-        if relay_status.get(relayID) == "inactive":
+        if relay_status.get(relayID) == {"status": "inactive", "duration": 0}:
             return JsonResponse(
                 {"status": "failed", "reason": f"Relay {relayID} is already inactive"},
                 status=400,
@@ -113,8 +110,7 @@ def stop_relay_module(relayID):
         print(f"Sent command 'STOP' to '{topic}'")
         client.disconnect()
 
-        # Update relay status to inactive
-        relay_status[relayID] = "inactive"
+        relay_status[relayID] = {"status": "inactive", "duration": 0}
 
         return JsonResponse(
             {"status": "success", "relay": relayID, "action": "stopped"}
