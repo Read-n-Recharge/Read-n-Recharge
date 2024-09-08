@@ -11,7 +11,6 @@ relay_status = {
     1: {"status": DEFAULT_RELAY_STATUS, "duration": 0},
     2: {"status": DEFAULT_RELAY_STATUS, "duration": 0},
     3: {"status": DEFAULT_RELAY_STATUS, "duration": 0},
-    4: {"status": DEFAULT_RELAY_STATUS, "duration": 0},
 }
 
 

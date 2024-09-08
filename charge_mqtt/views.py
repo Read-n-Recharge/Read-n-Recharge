@@ -4,6 +4,8 @@ import paho.mqtt.client as mqtt
 import os
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+
+from charge_mqtt.mqtt_helpers import connect_mqtt
 from .serializers import RelayActivation
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
@@ -11,31 +13,7 @@ from .models import RelayActivation
 from .relay_manager import relay_status
 
 
-def on_message(client, userdata, message):
-    print(
-        f"Received message '{str(message.payload.decode())}' on topic '{message.topic}' with QoS {message.qos}"
-    )
 
-
-def connect_mqtt():
-    client = mqtt.Client()
-
-    client.username_pw_set("PutipongSailen", "Putipong.48852")
-
-    ca_cert_path = os.path.join(os.path.dirname(__file__), "cert/emqxsl-ca.crt")
-    client.tls_set(ca_certs=ca_cert_path)
-
-    try:
-        client.connect("wb35b1b7.ala.asia-southeast1.emqxsl.com", 8883, 60)
-        print("Connected to MQTT Broker")
-    except Exception as e:
-        print(f"Failed to connect MQTT Broker: {e}")
-        return None
-
-    client.on_message = on_message
-    client.loop_start()
-
-    return client
 
 
 def check_emqx_connection():
@@ -47,6 +25,16 @@ def check_emqx_connection():
         print(f"Message sent to {topic}: {message}")
     else:
         print("Failed to send message due to connection issue")
+
+
+def validate_relay_id(relayID):
+    """Helper to validate if the relay ID exists."""
+    if relayID not in relay_status:
+        return JsonResponse(
+            {"status": "failed", "reason": f"Relay {relayID} does not exist"},
+            status=400,
+        )
+    return None
 
 
 @csrf_exempt
@@ -67,6 +55,10 @@ def start_mqtt_listener(request):
 
 def control_relay_module(relayID, duration):
     client = connect_mqtt()
+    validation_response = validate_relay_id(relayID)
+    if validation_response:
+        return validation_response
+
     if client:
         if relay_status.get(relayID) == "active":
             return JsonResponse(
@@ -105,6 +97,10 @@ def control_relay_module(relayID, duration):
 
 def stop_relay_module(relayID):
     client = connect_mqtt()
+    validation_response = validate_relay_id(relayID)
+    if validation_response:
+        return validation_response
+
     if client:
         if relay_status.get(relayID) == "inactive":
             return JsonResponse(
@@ -136,6 +132,10 @@ def stop_relay_module(relayID):
 def start_relay(request, relayID):
     user = request.user
 
+    validation_response = validate_relay_id(relayID)
+    if validation_response:
+        return validation_response
+
     if request.method == "POST":
         data = json.loads(request.body)
         duration = data.get("duration", 15)
@@ -160,6 +160,9 @@ def start_relay(request, relayID):
 @permission_classes([IsAuthenticated])
 def stop_relay(request, relayID):
     user = request.user
+    validation_response = validate_relay_id(relayID)
+    if validation_response:
+        return validation_response
 
     if request.method == "POST":
         return stop_relay_module(relayID)
@@ -174,6 +177,9 @@ def stop_relay(request, relayID):
 @permission_classes([IsAuthenticated])
 def start_relay(request, relayID):
     user = request.user
+    validation_response = validate_relay_id(relayID)
+    if validation_response:
+        return validation_response
 
     if request.method == "POST":
         data = json.loads(request.body)
