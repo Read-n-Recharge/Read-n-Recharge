@@ -63,6 +63,21 @@ class StudyPreferenceView(generics.CreateAPIView):
             return serializer.save(user=user)
         except User.DoesNotExist:
             raise NotFound({"error": "User not found."})
+        
+class UpdateStudyPreferenceView(generics.UpdateAPIView):
+    queryset = StudyPrefernce.objects.all()
+    serializer_class = StudyPreferenceSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        user = self.request.user
+        if not isinstance(user, User) or not user.is_authenticated:
+            return Response({"error": "User not authenticated."}, status=401)
+
+        try:
+            return StudyPrefernce.objects.get(user=user)
+        except StudyPrefernce.DoesNotExist:
+            raise NotFound({"error": "Study preference not found for this user."})
 
 
 class UserDetailView(generics.RetrieveAPIView):
@@ -93,7 +108,7 @@ class LogoutView(generics.GenericAPIView):
         try:
             refresh_token = request.data["refresh_token"]
             token = RefreshToken(refresh_token)
-            token.blacklist()  # Blacklisting the token
+            token.blacklist()
             return Response(status=status.HTTP_205_RESET_CONTENT)
         except Exception as e:
             return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": str(e)})

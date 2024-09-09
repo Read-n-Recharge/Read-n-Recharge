@@ -10,5 +10,6 @@ urlpatterns = [
     path("form/<int:user_id>/", views.StudyPreferenceView.as_view()),
     path("user/<int:pk>/", views.UserDetailView.as_view()),
     path("form/<int:user_id>", views.UserStudyPreferenceView.as_view()),
+    path("form/update/", views.UpdateStudyPreferenceView.as_view()),
     path("logout", views.LogoutView.as_view(), name="logout"),
 ]
