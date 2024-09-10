@@ -3,8 +3,9 @@ from .models import UserPoint, PointRecord
 from .serializers import UserPointSerializer, PointRecordSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import serializers
-
-# Create your views here.
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 
 class UserPointViewSet(viewsets.ModelViewSet):
@@ -53,3 +54,14 @@ class PointRecordViewSet(viewsets.ModelViewSet):
             user_point.deduct_points(point_record.points)
         else:
             raise ValueError("Invalid action specified")
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_point_history(request):
+
+    user = request.user
+    point_history = PointRecord.objects.filter(user=user).order_by("-timestamp")[:7]
+    serializer = PointRecordSerializer(point_history, many=True)
+
+    return Response(serializer.data)
