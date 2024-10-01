@@ -50,7 +50,7 @@ def start_mqtt_listener(request):
     )
 
 
-def control_relay_module(relayID, duration):
+def control_relay_module(relayID, duration, user_id):
     client = connect_mqtt()
     validation_response = validate_relay_id(relayID)
     if validation_response:
@@ -65,15 +65,15 @@ def control_relay_module(relayID, duration):
 
         topic = f"relay/{relayID}/control"
         # Send the START command with the duration included in the message payload
-        payload = json.dumps({"command": "START", "duration": duration})
+        payload = json.dumps({"command": "START", "duration": duration, "user_id": user_id})
         client.publish(topic, payload)
-        print(f"Sent command '{payload}' to '{topic}' for {duration} seconds")
+        print(f"Sent command '{payload}' to '{topic}' for {duration} seconds by user: {user_id} ")
 
         relay_status[relayID] = {"status": "active", "duration": duration}
 
         def stop_relay():
-            client.publish(topic, json.dumps({"command": "STOP"}))
-            print(f"Sent command 'STOP' to '{topic}' after {duration} seconds")
+            client.publish(topic, json.dumps({"command": "STOP", "user_id": user_id}))
+            print(f"Sent command 'STOP' to '{topic}' after {duration} seconds by user {user_id}")
             client.disconnect()
 
             # Update relay status to inactive
@@ -83,7 +83,7 @@ def control_relay_module(relayID, duration):
         timer.start()
 
         return JsonResponse(
-            {"status": "success", "relay": relayID, "duration": duration}
+            {"status": "success", "relay": relayID, "duration": duration, "user_id": user_id}
         )
     else:
         return JsonResponse(
@@ -144,11 +144,12 @@ def start_relay(request, relayID):
         )
 
         # Control the relay module
-        return control_relay_module(relayID, duration * 60)
+        return control_relay_module(relayID, duration * 60, user.id)
 
     return JsonResponse(
         {"status": "failed", "reason": "Invalid request method"}, status=400
     )
+
 
 
 @csrf_exempt
@@ -187,7 +188,7 @@ def start_relay(request, relayID):
             duration=duration * 60,
         )
 
-        return control_relay_module(relayID, duration * 60)
+        return control_relay_module(relayID, duration * 60, user.id)
 
     return JsonResponse(
         {"status": "failed", "reason": "Invalid request method"}, status=400
