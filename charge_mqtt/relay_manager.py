@@ -14,7 +14,7 @@ relay_status = {
 }
 
 
-def control_relay(relayID, duration):
+def control_relay(relayID, duration, user_id):
     """Control the relay to start for the specified duration and stop automatically."""
     client = connect_mqtt()
     if not client:
@@ -31,12 +31,12 @@ def control_relay(relayID, duration):
 
     # Activate the relay for the specified duration
     publish_message(
-        client, f"{relayID}/control", {"command": "START", "duration": duration}
+        client, f"{relayID}/control", {"command": "START", "duration": duration, "user_id": user_id}
     )
     relay_status[relayID] = {"status": RELAY_STATUS_ACTIVE, "duration": duration}
 
     def stop_relay():
-        publish_message(client, f"{relayID}/control", {"command": "STOP"})
+        publish_message(client, f"{relayID}/control", {"command": "STOP", "user_id": user_id})
         relay_status[relayID] = {"status": DEFAULT_RELAY_STATUS, "duration": 0}
         client.disconnect()
 
@@ -44,10 +44,10 @@ def control_relay(relayID, duration):
     timer = threading.Timer(duration, stop_relay)
     timer.start()
 
-    return JsonResponse({"status": "success", "relay": relayID, "duration": duration})
+    return JsonResponse({"status": "success", "relay": relayID, "duration": duration, "user_id": user_id})
 
 
-def stop_relay(relayID):
+def stop_relay(relayID, user_id):
     """Stop the relay."""
     client = connect_mqtt()
     if not client:
@@ -62,11 +62,11 @@ def stop_relay(relayID):
             status=400,
         )
 
-    publish_message(client, f"{relayID}/control", {"command": "STOP"})
+    publish_message(client, f"{relayID}/control", {"command": "STOP", "user_id": user_id})
     relay_status[relayID] = {"status": DEFAULT_RELAY_STATUS, "duration": 0}
     client.disconnect()
 
-    return JsonResponse({"status": "success", "relay": relayID, "action": "stopped"})
+    return JsonResponse({"status": "success", "relay": relayID, "action": "stopped", "user_id": user_id})
 
 
 def check_relay_status(request):
