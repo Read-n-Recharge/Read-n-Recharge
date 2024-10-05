@@ -5,6 +5,8 @@ class RelayActivation(models.Model):
     relay_id = models.IntegerField()
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     duration = models.IntegerField()
+    password = models.CharField(max_length=6)
 
     def __str__(self):
         return f"Relay {self.relay_id} activated by {self.user} for {self.duration} seconds"
+

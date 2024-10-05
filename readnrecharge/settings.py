@@ -33,7 +33,7 @@ ALLOWED_HOSTS = ["172.20.10.2", "localhost", "127.0.0.1","localhost:5173"]
 
 INSTALLED_APPS = [
     "rest_framework",
-    "jazzmin",
+    # "jazzmin",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",

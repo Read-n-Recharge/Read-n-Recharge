@@ -50,7 +50,7 @@ def start_mqtt_listener(request):
     )
 
 
-def control_relay_module(relayID, duration, user_id):
+def control_relay_module(relayID, duration, user_id, password):
     client = connect_mqtt()
     validation_response = validate_relay_id(relayID)
     if validation_response:
@@ -65,9 +65,9 @@ def control_relay_module(relayID, duration, user_id):
 
         topic = f"relay/{relayID}/control"
         # Send the START command with the duration included in the message payload
-        payload = json.dumps({"command": "START", "duration": duration, "user_id": user_id})
+        payload = json.dumps({"command": "START", "duration": duration, "user_id": user_id, "password": password})
         client.publish(topic, payload)
-        print(f"Sent command '{payload}' to '{topic}' for {duration} seconds by user: {user_id} ")
+        print(f"Sent command '{payload}' to '{topic}' for {duration} seconds by user: {user_id}")
 
         relay_status[relayID] = {"status": "active", "duration": duration}
 
@@ -135,16 +135,23 @@ def start_relay(request, relayID):
     if request.method == "POST":
         data = json.loads(request.body)
         duration = data.get("duration", 15)
+        password = data.get("password")
+
+        if not validate_password(password):
+            return JsonResponse(
+                {"Status": "failed", "reason": "Password must must be a 6-digit number."}, status =400
+            )
 
         # Log the relay activation
         activation = RelayActivation.objects.create(
             relay_id=relayID,
             user=user,
             duration=duration * 60,
+            password = password
         )
 
         # Control the relay module
-        return control_relay_module(relayID, duration * 60, user.id)
+        return control_relay_module(relayID, duration * 60, user.id, password)
 
     return JsonResponse(
         {"status": "failed", "reason": "Invalid request method"}, status=400
@@ -169,30 +176,35 @@ def stop_relay(request, relayID):
     )
 
 
-@csrf_exempt
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def start_relay(request, relayID):
-    user = request.user
-    validation_response = validate_relay_id(relayID)
-    if validation_response:
-        return validation_response
+# @csrf_exempt
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def start_relay(request, relayID):
+#     user = request.user
+#     validation_response = validate_relay_id(relayID)
+#     if validation_response:
+#         return validation_response
 
-    if request.method == "POST":
-        data = json.loads(request.body)
-        duration = data.get("duration", 15)
+#     if request.method == "POST":
+#         data = json.loads(request.body)
+#         duration = data.get("duration", 15)
 
-        activation = RelayActivation.objects.create(
-            relay_id=relayID,
-            user=user,
-            duration=duration * 60,
-        )
+#         activation = RelayActivation.objects.create(
+#             relay_id=relayID,
+#             user=user,
+#             duration=duration * 60,
+#         )
 
-        return control_relay_module(relayID, duration * 60, user.id)
+#         return control_relay_module(relayID, duration * 60, user.id)
 
-    return JsonResponse(
-        {"status": "failed", "reason": "Invalid request method"}, status=400
-    )
+#     return JsonResponse(
+#         {"status": "failed", "reason": "Invalid request method"}, status=400
+#     )
+
+def validate_password(password):
+    if len(password) != 6 or not password.isdigit():
+        return False
+    return True
 
 
 # Function to check the status of all relays
