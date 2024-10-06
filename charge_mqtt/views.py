@@ -12,6 +12,9 @@ from rest_framework.decorators import api_view, permission_classes
 from .models import RelayActivation
 from .relay_manager import relay_status
 
+from django.core.mail import send_mail
+from django.conf import settings
+
 
 def check_emqx_connection():
     client = connect_mqtt()
@@ -150,6 +153,14 @@ def start_relay(request, relayID):
             password = password
         )
 
+        send_mail(
+            subject='Your Charging Station Password',
+            message=f'Your password for the charging station is: {password} for socker-ID: {relayID}',
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[user.email],
+            fail_silently=False
+        )
+
         # Control the relay module
         return control_relay_module(relayID, duration * 60, user.id, password)
 
@@ -174,6 +185,8 @@ def stop_relay(request, relayID):
     return JsonResponse(
         {"status": "failed", "reason": "Invalid request method"}, status=400
     )
+
+
 
 
 # @csrf_exempt
