@@ -2,6 +2,9 @@ import os
 import json
 import paho.mqtt.client as mqtt
 
+from authentication.models import User
+from charge_mqtt.models import RelayUsage
+
 # MQTT connection credentials and settings (constants)
 MQTT_BROKER_HOST = "wb35b1b7.ala.asia-southeast1.emqxsl.com"
 MQTT_BROKER_PORT = 8883
@@ -13,10 +16,26 @@ CA_CERT_PATH = os.path.join(os.path.dirname(__file__), "cert/emqxsl-ca.crt")
 
 
 def on_message(client, userdata, message):
-    """Callback when a message is received."""
-    print(
-        f"Received message '{message.payload.decode()}' on topic '{message.topic}' with QoS {message.qos}"
+    payload = message.payload.decode("utf-8")
+    data = json.loads(payload)
+
+    user_id = data.get("user_id")
+    relay_id = data.get("relayID")
+    duration = data.get("duration")
+    usage_current = data.get("usage_current")
+    carbon_credit = data.get("carbon_credit")
+
+    user = User.objects.get(id=user_id)
+
+    RelayUsage.object.create(
+        user=user,
+        relay_id=relay_id,
+        duration=duration,
+        usage_current=usage_current,
+        carbon_credit=carbon_credit,
     )
+
+    print(f"Data from SUB topic: relay: {relay_id} carbon credit: {carbon_credit}.")
 
 
 def connect_mqtt():
@@ -34,6 +53,8 @@ def connect_mqtt():
         return None
 
     client.on_message = on_message
+
+    client.subscribe ("save/database")
     client.loop_start()
     return client
 

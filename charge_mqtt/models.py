@@ -10,3 +10,12 @@ class RelayActivation(models.Model):
     def __str__(self):
         return f"Relay {self.relay_id} activated by {self.user} for {self.duration} seconds"
 
+class RelayUsage(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    relay_id = models.IntegerField()
+    duration = models.IntegerField()
+    usage_current = models.FloatField()
+    carbon_credit = models.FloatField()
+
+    def __str__(self):
+        return f"Usage for Charging {self.relay_id} usage current {self.usage_current} receive carbon credit {self.carbon_credit}."
