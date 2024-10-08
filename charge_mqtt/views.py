@@ -1,41 +1,14 @@
 import json
-import threading
-import paho.mqtt.client as mqtt
-import os
 from django.http import JsonResponse
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes
 from django.views.decorators.csrf import csrf_exempt
 
 from charge_mqtt.mqtt_helpers import connect_mqtt
-from .serializers import RelayActivation
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.decorators import api_view, permission_classes
+from .relay_manager import control_relay, stop_relay, check_relay_status, validate_relay_id
 from .models import RelayActivation
-from .relay_manager import relay_status
-
-from django.core.mail import send_mail
-from django.conf import settings
-
-
-def check_emqx_connection():
-    client = connect_mqtt()
-    if client:
-        topic = "emqx/esp32"
-        message = "Django server started successfully"
-        client.publish(topic, message)
-        print(f"Message sent to {topic}: {message}")
-    else:
-        print("Failed to send message due to connection issue")
-
-
-def validate_relay_id(relayID):
-    """Helper to validate if the relay ID exists."""
-    if relayID not in relay_status:
-        return JsonResponse(
-            {"status": "failed", "reason": f"Relay {relayID} does not exist"},
-            status=400,
-        )
-    return None
-
+from .utils import send_password_email, validate_password
+from .relay_manager import stop_relay as stop_relay_in_manager
 
 @csrf_exempt
 def start_mqtt_listener(request):
@@ -47,130 +20,40 @@ def start_mqtt_listener(request):
             return JsonResponse(
                 {"status": "failed", "reason": "Connection issue"}, status=500
             )
-
     return JsonResponse(
         {"status": "failed", "reason": "invalid request method"}, status=400
     )
 
-
-def control_relay_module(relayID, duration, user_id, password):
-    client = connect_mqtt()
-    validation_response = validate_relay_id(relayID)
-    if validation_response:
-        return validation_response
-
-    if client:
-        if relay_status.get(relayID) == "active":
-            return JsonResponse(
-                {"status": "failed", "reason": f"Relay {relayID} is already active"},
-                status=400,
-            )
-
-        topic = f"relay/{relayID}/control"
-        # Send the START command with the duration included in the message payload
-        payload = json.dumps({"command": "START", "duration": duration, "user_id": user_id, "password": password})
-        client.publish(topic, payload)
-        print(f"Sent command '{payload}' to '{topic}' for {duration} seconds by user: {user_id}")
-
-        relay_status[relayID] = {"status": "active", "duration": duration}
-
-        def stop_relay():
-            client.publish(topic, json.dumps({"command": "STOP", "user_id": user_id}))
-            print(f"Sent command 'STOP' to '{topic}' after {duration} seconds by user {user_id}")
-            client.disconnect()
-
-            # Update relay status to inactive
-            relay_status[relayID] = {"status": "inactive", "duration": 0}
-
-        timer = threading.Timer(duration, stop_relay)
-        timer.start()
-
-        return JsonResponse(
-            {"status": "success", "relay": relayID, "duration": duration, "user_id": user_id}
-        )
-    else:
-        return JsonResponse(
-            {"status": "failed", "reason": "Failed to Connect to MQTT Broker"},
-            status=500,
-        )
-
-
-def stop_relay_module(relayID):
-    client = connect_mqtt()
-    validation_response = validate_relay_id(relayID)
-    if validation_response:
-        return validation_response
-
-    if client:
-        if relay_status.get(relayID) == {"status": "inactive", "duration": 0}:
-            return JsonResponse(
-                {"status": "failed", "reason": f"Relay {relayID} is already inactive"},
-                status=400,
-            )
-
-        topic = f"relay/{relayID}/control"
-        client.publish(topic, json.dumps({"command": "STOP"}))
-        print(f"Sent command 'STOP' to '{topic}'")
-        client.disconnect()
-
-        relay_status[relayID] = {"status": "inactive", "duration": 0}
-
-        return JsonResponse(
-            {"status": "success", "relay": relayID, "action": "stopped"}
-        )
-    else:
-        return JsonResponse(
-            {"status": "failed", "reason": "Failed to Connect to MQTT Broker"},
-            status=500,
-        )
-
-
-@csrf_exempt
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def start_relay(request, relayID):
     user = request.user
+    data = json.loads(request.body)
+    duration = data.get("duration", 15)
+    password = data.get("password")
 
+    # Validate relayID and password
     validation_response = validate_relay_id(relayID)
     if validation_response:
         return validation_response
 
-    if request.method == "POST":
-        data = json.loads(request.body)
-        duration = data.get("duration", 15)
-        password = data.get("password")
-
-        if not validate_password(password):
-            return JsonResponse(
-                {"Status": "failed", "reason": "Password must must be a 6-digit number."}, status =400
-            )
-
-        # Log the relay activation
-        activation = RelayActivation.objects.create(
-            relay_id=relayID,
-            user=user,
-            duration=duration * 60,
-            password = password
+    if not validate_password(password):
+        return JsonResponse(
+            {"status": "failed", "reason": "Password must be a 6-digit number."}, status=400
         )
 
-        send_mail(
-            subject='Your Charging Station Password',
-            message=f'Your password for the charging station is: {password} for socker-ID: {relayID}',
-            from_email=settings.EMAIL_HOST_USER,
-            recipient_list=[user.email],
-            fail_silently=False
-        )
-
-        # Control the relay module
-        return control_relay_module(relayID, duration * 60, user.id, password)
-
-    return JsonResponse(
-        {"status": "failed", "reason": "Invalid request method"}, status=400
+    # Log the relay activation
+    activation = RelayActivation.objects.create(
+        relay_id=relayID, user=user, duration=duration * 60, password=password
     )
 
+    # Send password email
+    send_password_email(user, relayID, password)
+
+    # Control relay
+    return control_relay(relayID, duration * 60, user.id, password)
 
 
-@csrf_exempt
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def stop_relay(request, relayID):
@@ -179,47 +62,11 @@ def stop_relay(request, relayID):
     if validation_response:
         return validation_response
 
-    if request.method == "POST":
-        return stop_relay_module(relayID)
-
-    return JsonResponse(
-        {"status": "failed", "reason": "Invalid request method"}, status=400
-    )
+    return stop_relay_in_manager(relayID, user.id)
 
 
-
-
-# @csrf_exempt
-# @api_view(["POST"])
-# @permission_classes([IsAuthenticated])
-# def start_relay(request, relayID):
-#     user = request.user
-#     validation_response = validate_relay_id(relayID)
-#     if validation_response:
-#         return validation_response
-
-#     if request.method == "POST":
-#         data = json.loads(request.body)
-#         duration = data.get("duration", 15)
-
-#         activation = RelayActivation.objects.create(
-#             relay_id=relayID,
-#             user=user,
-#             duration=duration * 60,
-#         )
-
-#         return control_relay_module(relayID, duration * 60, user.id)
-
-#     return JsonResponse(
-#         {"status": "failed", "reason": "Invalid request method"}, status=400
-#     )
-
-def validate_password(password):
-    if len(password) != 6 or not password.isdigit():
-        return False
-    return True
-
-
-# Function to check the status of all relays
-def check_relay_status(request):
-    return JsonResponse(relay_status)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def relay_status_view(request):
+    """View to check the status of all relays."""
+    return JsonResponse(check_relay_status())
