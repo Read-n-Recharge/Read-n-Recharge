@@ -14,6 +14,10 @@ CA_CERT_PATH = os.path.join(os.path.dirname(__file__), "cert/emqxsl-ca.crt")
 
 
 def on_message(client, userdata, message):
+
+    from authentication.models import User
+    from charge_mqtt.models import RelayUsage
+
     """Callback when a message is received."""
     payload = message.payload.decode("utf-8")
     data = json.loads(payload)
@@ -25,9 +29,24 @@ def on_message(client, userdata, message):
         # Update the relay status based on the incoming message
         from .relay_manager import update_relay_status
         update_relay_status(relay_id, status)
+        print(f"Received message '{payload}' on topic '{message.topic}' with QoS {message.qos}")
 
-    print(f"Received message '{payload}' on topic '{message.topic}' with QoS {message.qos}")
+    elif message.topic == "save/database": 
+        user_id = data.get("user_id")
+        relay_id = data.get("relay_id")
+        usage_current = data.get("usage_current")
+        carbon_credit = data.get("carbon_credit")
 
+        user = User.objects.get(id=user_id)
+
+        RelayUsage.objects.create(
+            user=user,
+            relay_id=relay_id,
+            usage_current=usage_current,
+            carbon_credit=carbon_credit,
+        )
+
+        print(f"Data from SUB topic: relay: {relay_id} carbon credit: {carbon_credit}.")
 
 def connect_mqtt():
     """Connect to the MQTT broker with TLS and authentication."""
@@ -39,6 +58,7 @@ def connect_mqtt():
         client.connect(MQTT_BROKER_HOST, MQTT_BROKER_PORT, MQTT_KEEP_ALIVE)
         client.on_message = on_message
 
+        client.subscribe("save/database")
         client.subscribe("relay/status")
 
         client.loop_start()
