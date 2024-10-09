@@ -3,12 +3,15 @@ from django.http import JsonResponse
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 from django.views.decorators.csrf import csrf_exempt
+from rest_framework import status
 
 from charge_mqtt.mqtt_helpers import connect_mqtt
 from .relay_manager import control_relay, stop_relay, check_relay_status, validate_relay_id
-from .models import RelayActivation
+from .models import RelayActivation, RelayUsage
 from .utils import send_password_email, validate_password
 from .relay_manager import stop_relay as stop_relay_in_manager
+from .serializers import RelayusageSerializer
+
 
 @csrf_exempt
 def start_mqtt_listener(request):
@@ -64,6 +67,17 @@ def stop_relay(request, relayID):
 
     return stop_relay_in_manager(relayID, user.id)
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def relay_usage(request):
+    user = request.user
+    relay_usage_data = RelayUsage.objects.filter(user=user)
+
+    if relay_usage_data.exists():
+        serializer = RelayusageSerializer(relay_usage_data, many=True)
+        return JsonResponse(serializer.data, safe=False ,status = status.HTTP_200_OK)
+    else:
+        return JsonResponse({"error": "No relay usage data found for this user."}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
