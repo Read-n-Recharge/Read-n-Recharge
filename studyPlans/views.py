@@ -1,8 +1,8 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics
-from .serializer import TaskSerializer
-from .models import Task
+from .serializer import TaskSerializer, StudySessionSerializer
+from .models import Task, StudySession
 
 
 # Create task
@@ -41,3 +41,19 @@ class UserTaskView(generics.ListAPIView):
 
     def get_queryset(self):
         return Task.objects.filter(user=self.request.user)
+
+#Study session view
+class CreateStudySessionCreateView(generics.CreateAPIView):
+    serializer_class = StudySessionSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class StudySessionView(generics.ListAPIView):
+    serializer_class = StudySessionSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return StudySession.objects.filter(user=self.request.user)

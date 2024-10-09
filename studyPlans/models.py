@@ -14,4 +14,17 @@ class Task(models.Model):
     complete = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.user} - {self.deadlines} - {self.details}- {self.complexity}"
+        return f"{self.title}"
+
+
+class StudySession(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    task = models.ForeignKey(Task, on_delete=models.CASCADE)
+    studyMethod = models.CharField(max_length=50, null=False)
+    stress_level = models.CharField(max_length=10, null=True)
+    noise_level = models.CharField(max_length=10, null=True)
+    environment = models.CharField(max_length=10, null=True)
+    session_date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.task}"

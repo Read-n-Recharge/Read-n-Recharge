@@ -1,4 +1,4 @@
-from .models import Task
+from .models import Task, StudySession
 from rest_framework import serializers
 
 
@@ -15,3 +15,8 @@ class TaskSerializer(serializers.ModelSerializer):
             "complete",
         )
         read_only_fields = ["user"]
+
+class StudySessionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StudySession
+        fields = ['task', 'studyMethod', 'stress_level', 'noise_level', 'environment', 'session_date']
