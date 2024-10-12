@@ -19,4 +19,4 @@ class TaskSerializer(serializers.ModelSerializer):
 class StudySessionSerializer(serializers.ModelSerializer):
     class Meta:
         model = StudySession
-        fields = ['task', 'studyMethod', 'stress_level', 'noise_level', 'environment', 'session_date']
+        fields = ['task', 'studyMethod', 'stress_level', 'noise_level', 'session_date']

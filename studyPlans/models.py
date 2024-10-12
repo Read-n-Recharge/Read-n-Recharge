@@ -23,7 +23,7 @@ class StudySession(models.Model):
     studyMethod = models.CharField(max_length=50, null=False)
     stress_level = models.CharField(max_length=10, null=True)
     noise_level = models.CharField(max_length=10, null=True)
-    environment = models.CharField(max_length=10, null=True)
+    # environment = models.CharField(max_length=10, null=True)
     session_date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

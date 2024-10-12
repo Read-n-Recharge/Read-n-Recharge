@@ -61,7 +61,7 @@ class PointRecordViewSet(viewsets.ModelViewSet):
 def get_point_history(request):
 
     user = request.user
-    point_history = PointRecord.objects.filter(user=user).order_by("-timestamp")[:7]
+    point_history = PointRecord.objects.filter(user=user).order_by("-timestamp")
     serializer = PointRecordSerializer(point_history, many=True)
 
     return Response(serializer.data)
